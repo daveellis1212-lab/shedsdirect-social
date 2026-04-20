@@ -69,7 +69,7 @@ async function schedulePost(integrationId, content, scheduledDate, platform) {
     }]
   };
 
-  const response = await fetch(`${POSTIZ_API}/posts`, {
+  'Authorization': `Bearer ${POSTIZ_API_KEY}`,
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${POSTIZ_API_KEY}`,
