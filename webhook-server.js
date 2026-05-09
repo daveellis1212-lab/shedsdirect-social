@@ -20,7 +20,8 @@ function getPlatformSettings(platform) {
     case 'x':
       return { who_can_reply_post: 'everyone' };
     case 'pinterest':
-      return { __type: 'pinterest', board: process.env.POSTIZ_PINTEREST_BOARD_ID || 'garden-sheds' };
+  const pText = `${title}\n\n${excerpt}\n\nFind out more: ${url}`;
+  return pText.length > 500 ? pText.substring(0, 497) + '...' : pText;
     default:
       return {};
   }
