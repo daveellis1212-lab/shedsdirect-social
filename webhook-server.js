@@ -45,8 +45,9 @@ function buildContent(platform, title, url, excerpt) {
     case 'instagram':
       return `${title}\n\n${excerpt}\n\n#woodensheds #gardenshed #shedsdirect #gardenstorage #ukgarden #gardenbuilding #shedlife #gardendesign`;
     case 'x':
-      const xText = `${title} ${url}`;
-      return xText.length > 240 ? xText.substring(0, 237) + '...' : xText;
+  const cleanUrl = url.split('?')[0];
+  const xText = `${title} ${cleanUrl}`;
+  return xText.length > 240 ? xText.substring(0, 237) + '...' : xText;
     case 'pinterest':
       return `${title}\n\n${excerpt}\n\nFind out more: ${url}`;
     case 'gmb':
