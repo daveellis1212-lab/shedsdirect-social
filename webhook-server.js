@@ -64,7 +64,7 @@ async function schedulePost(integrationId, content, scheduledDate, platform) {
     tags: [],
     posts: [{
       integration: { id: integrationId },
-      value: [{ content, image: [] }],
+      value: [{ content, image: req.body.image ? [{ url: req.body.image }] : [] }],
       settings: getPlatformSettings(platform),
       group: `group_${Date.now()}_${platform}`
     }]
