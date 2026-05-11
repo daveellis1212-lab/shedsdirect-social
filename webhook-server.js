@@ -20,8 +20,7 @@ function getPlatformSettings(platform) {
     case 'x':
       return { who_can_reply_post: 'everyone' };
     case 'pinterest':
-  const pText = `${title}\n\n${excerpt}\n\nFind out more: ${url}`;
-  return pText.length > 500 ? pText.substring(0, 497) + '...' : pText;
+      return { __type: 'pinterest', board: process.env.POSTIZ_PINTEREST_BOARD_ID || 'garden-sheds' };
     default:
       return {};
   }
@@ -39,25 +38,26 @@ function getScheduledDates() {
 }
 
 function buildContent(platform, title, url, excerpt) {
+  const cleanUrl = url.split('?')[0];
   switch (platform) {
     case 'facebook':
-      return `🌳 ${title}\n\n${excerpt}\n\nRead more: ${url}`;
+      return `🌳 ${title}\n\n${excerpt}\n\nRead more: ${cleanUrl}`;
     case 'instagram':
       return `${title}\n\n${excerpt}\n\n#woodensheds #gardenshed #shedsdirect #gardenstorage #ukgarden #gardenbuilding #shedlife #gardendesign`;
     case 'x':
-  const cleanUrl = url.split('?')[0];
-  const xText = `${title} ${cleanUrl}`;
-  return xText.length > 240 ? xText.substring(0, 237) + '...' : xText;
+      const xText = `${title} ${cleanUrl}`;
+      return xText.length > 240 ? xText.substring(0, 237) + '...' : xText;
     case 'pinterest':
-      return `${title}\n\n${excerpt}\n\nFind out more: ${url}`;
+      const pText = `${title}\n\n${excerpt}\n\nFind out more: ${cleanUrl}`;
+      return pText.length > 500 ? pText.substring(0, 497) + '...' : pText;
     case 'gmb':
-      return `${title}\n\n${excerpt}\n\nFree UK delivery available. Read more: ${url}`;
+      return `${title}\n\n${excerpt}\n\nFree UK delivery available. Read more: ${cleanUrl}`;
     default:
-      return `${title}\n\n${url}`;
+      return `${title}\n\n${cleanUrl}`;
   }
 }
 
-async function schedulePost(integrationId, content, scheduledDate, platform) {
+async function schedulePost(integrationId, content, scheduledDate, platform, imageUrl) {
   const postPayload = {
     type: 'schedule',
     date: scheduledDate,
@@ -65,7 +65,7 @@ async function schedulePost(integrationId, content, scheduledDate, platform) {
     tags: [],
     posts: [{
       integration: { id: integrationId },
-      value: [{ content, image: req.body.image ? [{ url: req.body.image }] : [] }],
+      value: [{ content, image: imageUrl ? [{ url: imageUrl }] : [] }],
       settings: getPlatformSettings(platform),
       group: `group_${Date.now()}_${platform}`
     }]
@@ -88,9 +88,9 @@ app.get('/', (req, res) => {
   res.json({ status: 'ShedsDirect Social Webhook running' });
 });
 
-// Main webhook endpoint — called by Zapier on new RSS item
+// Main webhook endpoint
 app.post('/publish', async (req, res) => {
-  const { title, url, excerpt } = req.body;
+  const { title, url, excerpt, image } = req.body;
 
   if (!title || !url) {
     return res.status(400).json({ error: 'title and url are required' });
@@ -98,6 +98,7 @@ app.post('/publish', async (req, res) => {
 
   console.log(`\nNew post received: ${title}`);
   console.log(`URL: ${url}`);
+  console.log(`Image: ${image || 'none'}`);
 
   const scheduledDates = getScheduledDates();
   const results = {};
@@ -110,18 +111,18 @@ app.post('/publish', async (req, res) => {
 
     try {
       const content = buildContent(platform, title, url, excerpt || '');
-      const result = await schedulePost(integrationId, content, scheduledDates[platform], platform);
+      const result = await schedulePost(integrationId, content, scheduledDates[platform], platform, image);
 
       if (result.id || (Array.isArray(result) && result.length > 0)) {
         console.log(`✅ ${platform} scheduled for ${scheduledDates[platform]}`);
         results[platform] = 'scheduled';
       } else {
         console.log(`❌ ${platform} failed: ${JSON.stringify(result)}`);
-        results[platform] = 'failed';
+        results[platform] = { status: 'failed', detail: result };
       }
     } catch (err) {
       console.log(`❌ ${platform} error: ${err.message}`);
-      results[platform] = 'error';
+      results[platform] = { status: 'error', detail: err.message };
     }
 
     await new Promise(r => setTimeout(r, 1000));
